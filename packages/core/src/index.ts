@@ -10,7 +10,14 @@
  */
 
 // Public data types.
-export type { Step, Session, ProtocolModel, CompileReport, Transition } from "./types.js";
+export type {
+  Step,
+  Session,
+  ProtocolModel,
+  CompileReport,
+  Transition,
+  AmbiguousState,
+} from "./types.js";
 
 // Recording.
 export { Recorder, record, recordMockSessions, recordOne, MOCK_SCRIPTS } from "./recorder.js";
@@ -18,8 +25,14 @@ export { Recorder, record, recordMockSessions, recordOne, MOCK_SCRIPTS } from ".
 // Inference and compilation.
 export { infer } from "./compile.js";
 export type { InferOptions } from "./compile.js";
-export { compile } from "./compile.js";
-export type { CompileOptions } from "./compile.js";
+export {
+  compile,
+  analyzePlanAmbiguity,
+  forwardBranches,
+  resolveAbstraction,
+  ambiguousResponseTypes,
+} from "./compile.js";
+export type { CompileOptions, PlanAmbiguityReport } from "./compile.js";
 export { inferFsm } from "./inference.js";
 export type { LearnedFsm, MergeMode } from "./inference.js";
 
@@ -30,12 +43,15 @@ export type { DriverStepResult, Goal, NextCommand } from "./driver.js";
 // Abstraction (parameter templating).
 export {
   abstractStep,
+  makeAbstractStep,
   abstractSession,
   abstractVerb,
   abstractResponse,
+  namespaceResponseType,
+  VERB_NAMESPACE_SEP,
   PARAMETER_FIELDS,
 } from "./abstract.js";
-export type { AbstractStepFn } from "./abstract.js";
+export type { AbstractStepFn, AbstractStepOptions, ResponseNamespace } from "./abstract.js";
 
 // HTTP transport + structural HTTP abstraction (REST / GraphQL).
 export { HttpAdapter, abstractHttpStep, makeAbstractHttpStep } from "./http.js";

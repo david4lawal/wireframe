@@ -39,10 +39,31 @@ export interface ProtocolModel {
   abstraction: string[];
 }
 
+/**
+ * A forward branch at a state: the planner has 2+ DISTINCT verbs that each lead to a DIFFERENT
+ * successor state. `note` explains why it was classified (spurious merge artifact vs genuine branch).
+ */
+export interface AmbiguousState {
+  state: string;
+  verbs: string[];
+  note: string;
+}
+
 /** Report produced by compile(): coverage, safety, and what was held out. */
 export interface CompileReport {
   coverage: number;
   unsafeContinuationRate: number;
   passed: boolean;
   heldOutSessions: number;
+  /**
+   * True when a forward branch under the GIVEN abstraction DISAPPEARS under the finer auto-namespaced
+   * abstraction: the branch is a spurious merge artifact and the planner could guess. Callers should
+   * re-infer/compile with responseNamespace:'auto' (or 'by-verb') to remove it. Only meaningful when
+   * compile() was given `sessions` to compare against.
+   */
+  requiresFinerAbstraction?: boolean;
+  /** Forward branches judged to be spurious merge artifacts (vanish under the finer abstraction). */
+  ambiguousStates?: AmbiguousState[];
+  /** Forward branches that SURVIVE the finer abstraction: genuine protocol branches, allowed. */
+  genuineBranches?: AmbiguousState[];
 }

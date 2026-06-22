@@ -32,7 +32,13 @@ export type Goal = string | { state: string } | { anyOf: string[] };
 export type NextCommand =
   | { command: string; toward: string; deterministic: true }
   | { done: true }
-  | { escalate: true; reason: "no-path-to-goal" | "unknown-state"; deterministic: false };
+  | {
+      escalate: true;
+      reason: "no-path-to-goal" | "unknown-state" | "ambiguous-branch";
+      deterministic: false;
+      /** For "ambiguous-branch": the tied progress verbs the planner refused to choose among. */
+      verbs?: string[];
+    };
 
 /** Internal serialization shape for toJSON / fromJSON. */
 interface DriverJson {
@@ -219,8 +225,12 @@ export class Driver {
    * response is ignored for planning). Returns:
    *   { command, toward, deterministic:true }  the verb to send next, and the state it advances to;
    *   { done:true }                            `state` already satisfies the goal;
-   *   { escalate:true, reason:"unknown-state" }   `state` is not a known state;
-   *   { escalate:true, reason:"no-path-to-goal" } no verb path reaches any goal state.
+   *   { escalate:true, reason:"unknown-state" }      `state` is not a known state;
+   *   { escalate:true, reason:"no-path-to-goal" }    no verb path reaches any goal state;
+   *   { escalate:true, reason:"ambiguous-branch" }   2+ TIED distinct progress verbs from `state`
+   *       each lie on an EQUAL shortest path to the goal but advance to DIFFERENT successor states.
+   *       The planner refuses to guess (defense in depth: a finer abstraction should have kept those
+   *       successors apart or merged them; either way the planner does not silently pick one).
    *
    * Progress edges (to != from) are preferred over self-loops so the search makes forward progress.
    */
@@ -230,39 +240,79 @@ export class Driver {
     }
     if (this.satisfiesGoal(state, goal)) return { done: true };
 
-    // BFS from `state`. parent[s] = { via verb, from state, firstVerb, firstTo } reconstructs the
-    // path; we only need the FIRST verb and the state it advances to.
-    interface Crumb {
-      firstVerb: string;
-      firstTo: string;
+    // Shortest-path distance (in progress edges) from every state to the NEAREST goal state. Reverse
+    // BFS from all goal states over reversed progress edges. Used both to find a next verb and to
+    // detect a tie among first verbs.
+    const dist = this.distancesToGoal(goal);
+    const here = dist.get(state);
+    if (here === undefined) {
+      return { escalate: true, reason: "no-path-to-goal", deterministic: false };
     }
-    const visited = new Set<string>([state]);
-    const queue: { node: string; crumb: Crumb | null }[] = [{ node: state, crumb: null }];
 
+    // Among progress edges out of `state`, the ones that make shortest-path progress are those whose
+    // successor is one step closer to the goal (dist(to) === dist(state) - 1). If 2+ of those have
+    // DISTINCT verbs AND DISTINCT successors, the choice is a genuine tie: refuse rather than guess.
+    const onShortest: { verb: string; to: string }[] = [];
+    for (const e of this.verbEdges(state)) {
+      if (e.to === state) continue; // self-loop never progresses
+      const d = dist.get(e.to);
+      if (d !== undefined && d === here - 1) onShortest.push(e);
+    }
+    const distinctVerbs = new Set(onShortest.map((e) => e.verb));
+    const distinctSuccs = new Set(onShortest.map((e) => e.to));
+    if (distinctVerbs.size >= 2 && distinctSuccs.size >= 2) {
+      return {
+        escalate: true,
+        reason: "ambiguous-branch",
+        deterministic: false,
+        verbs: [...distinctVerbs].sort(),
+      };
+    }
+
+    // Unambiguous: take the (unique) shortest-progress verb. If several edges tie only because one
+    // verb leads to several states, or several verbs lead to ONE state, that is not an ambiguous
+    // branch; pick the deterministic first by sorted (verb, to).
+    if (onShortest.length > 0) {
+      onShortest.sort((a, b) => a.verb.localeCompare(b.verb) || a.to.localeCompare(b.to));
+      const chosen = onShortest[0];
+      return { command: chosen.verb, toward: chosen.to, deterministic: true };
+    }
+
+    return { escalate: true, reason: "no-path-to-goal", deterministic: false };
+  }
+
+  /**
+   * Shortest-path distances (counting progress edges) from each state to the NEAREST state that
+   * satisfies `goal`. Reverse BFS from all goal states over reversed progress edges. States with no
+   * path to a goal are absent from the map.
+   */
+  private distancesToGoal(goal: Goal): Map<string, number> {
+    // Build reverse adjacency over progress edges (to -> from).
+    const rev = new Map<string, Set<string>>();
+    for (const t of this.transitions) {
+      if (t.to === t.from) continue; // self-loop is not progress
+      if (!rev.has(t.to)) rev.set(t.to, new Set());
+      rev.get(t.to)!.add(t.from);
+    }
+    const dist = new Map<string, number>();
+    const queue: string[] = [];
+    for (const s of this.states) {
+      if (this.satisfiesGoal(s, goal)) {
+        dist.set(s, 0);
+        queue.push(s);
+      }
+    }
     while (queue.length > 0) {
-      const { node, crumb } = queue.shift()!;
-      // Prefer progress edges (to != node) so a goal reachable through movement is found before
-      // self-loops add it to the frontier. Self-loops cannot reach a NEW state anyway.
-      const edges = this.verbEdges(node);
-      const ordered = [...edges].sort((a, b) => {
-        const ap = a.to !== node ? 0 : 1;
-        const bp = b.to !== node ? 0 : 1;
-        return ap - bp;
-      });
-      for (const e of ordered) {
-        if (e.to === node) continue; // self-loop: no progress, never reaches a new state
-        const firstVerb = crumb ? crumb.firstVerb : e.verb;
-        const firstTo = crumb ? crumb.firstTo : e.to;
-        if (this.satisfiesGoal(e.to, goal)) {
-          return { command: firstVerb, toward: firstTo, deterministic: true };
-        }
-        if (!visited.has(e.to)) {
-          visited.add(e.to);
-          queue.push({ node: e.to, crumb: { firstVerb, firstTo } });
+      const cur = queue.shift()!;
+      const d = dist.get(cur)!;
+      for (const pred of rev.get(cur) ?? []) {
+        if (!dist.has(pred)) {
+          dist.set(pred, d + 1);
+          queue.push(pred);
         }
       }
     }
-    return { escalate: true, reason: "no-path-to-goal", deterministic: false };
+    return dist;
   }
 
   /** Action selection from the LIVE cursor (sugar over nextCommand(goal, this.current)). */

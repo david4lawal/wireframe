@@ -1,6 +1,6 @@
 {
   "name": "@wframe/core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Infer a protocol state machine from black-box agent sessions, compile a safe deterministic driver, and prove it. No LLM on the learned path.",
   "license": "MIT",
   "author": "David Lawal",
@@ -45,6 +45,7 @@
     "test": "vitest run",
     "demo:coffee": "tsx demos/coffee-demo.ts",
     "demo:http": "tsx demos/http-demo.ts",
+    "demo:smtp": "tsx demos/smtp-demo.ts",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -63,12 +63,64 @@ export type AbstractStepFn = (step: { verb: string; response: string }) => {
   responseType: string;
 };
 
-/** Abstract a single step into an alphabet symbol "VERB/RESPONSE_TYPE". */
-export const abstractStep: AbstractStepFn = (step) => {
-  const verb = abstractVerb(step.verb);
-  const responseType = abstractResponse(step.response);
-  return { symbol: `${verb}/${responseType}`, verb, responseType };
-};
+/**
+ * Response-namespacing policy for the abstraction.
+ *
+ *  - 'none'    : leave the response type as-is (the default; backward compatible). Coarse protocols
+ *                that reuse ONE success code across distinct commands (e.g. SMTP's 250 after EHLO,
+ *                MAIL FROM, RCPT TO, and message-accept) can over-merge under this policy.
+ *  - 'by-verb' : suffix the response type with the request verb using a non-colliding separator,
+ *                so 250 under verb MAIL_FROM becomes "250@MAIL_FROM" (symbol "MAIL_FROM/250@MAIL_FROM").
+ *                This forces every command's responses into a distinct alphabet, keeping states apart.
+ *  - 'auto'    : data-driven. Resolved by the infer/compile flow, which namespaces ONLY the
+ *                response types that are genuinely ambiguous (occur under 2+ distinct verbs) and
+ *                leaves unambiguous ones untouched. A plain AbstractStepFn cannot see the corpus, so
+ *                makeAbstractStep treats 'auto' as 'none'; the corpus-aware resolution lives in
+ *                resolveAbstraction() (compile.ts).
+ */
+export type ResponseNamespace = "none" | "by-verb" | "auto";
+
+/**
+ * The separator that joins a response type to its verb when namespacing by verb. "@" never appears
+ * in a verb or in the "VERB/RESPONSE_TYPE" split (which cuts at the FIRST "/"), so the symbol stays
+ * unambiguously parseable: verbOf/respOf still split on the first "/", and the verb tail rides along
+ * inside the response half.
+ */
+export const VERB_NAMESPACE_SEP = "@";
+
+/** Apply by-verb namespacing to a response type: "250" under "MAIL_FROM" becomes "250@MAIL_FROM". */
+export function namespaceResponseType(responseType: string, verb: string): string {
+  return `${responseType}${VERB_NAMESPACE_SEP}${verb}`;
+}
+
+/** Options for makeAbstractStep. */
+export interface AbstractStepOptions {
+  /**
+   * Response-namespacing policy. Defaults to 'none' (unchanged behavior). 'by-verb' suffixes every
+   * response type with its verb. 'auto' is corpus-aware and resolved by infer/compile; a bare
+   * AbstractStepFn produced here treats 'auto' as 'none' (no corpus visible at this layer).
+   */
+  responseNamespace?: ResponseNamespace;
+}
+
+/**
+ * Build a text AbstractStepFn with an optional response-namespacing policy. The default policy is
+ * 'none', so makeAbstractStep() with no options is identical to the exported `abstractStep`.
+ */
+export function makeAbstractStep(options: AbstractStepOptions = {}): AbstractStepFn {
+  const policy = options.responseNamespace ?? "none";
+  return (step) => {
+    const verb = abstractVerb(step.verb);
+    const responseTypeRaw = abstractResponse(step.response);
+    // 'auto' is resolved corpus-wide upstream; at this bare-function layer it is a no-op ('none').
+    const responseType =
+      policy === "by-verb" ? namespaceResponseType(responseTypeRaw, verb) : responseTypeRaw;
+    return { symbol: `${verb}/${responseType}`, verb, responseType };
+  };
+}
+
+/** Abstract a single step into an alphabet symbol "VERB/RESPONSE_TYPE" (no namespacing). */
+export const abstractStep: AbstractStepFn = makeAbstractStep();
 
 /** Abstract a whole session (list of steps) into a list of symbols, with an optional abstraction fn. */
 export function abstractSession(steps: Step[], abstract: AbstractStepFn = abstractStep): string[] {

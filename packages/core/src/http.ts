@@ -16,7 +16,8 @@
  */
 
 import type { Adapter } from "./adapters.js";
-import type { AbstractStepFn } from "./abstract.js";
+import type { AbstractStepFn, ResponseNamespace } from "./abstract.js";
+import { namespaceResponseType } from "./abstract.js";
 
 /* ------------------------------------------------------------------ */
 /* HttpAdapter                                                         */
@@ -124,6 +125,13 @@ export interface HttpAbstractOptions {
    * to fall back to the structural signature.
    */
   classify?: (body: unknown, status: number) => string | undefined;
+  /**
+   * Response-namespacing policy. Defaults to 'none' (unchanged behavior). 'by-verb' suffixes the
+   * response type with the templatized verb, so a coarse status reused across distinct endpoints
+   * stays a distinct symbol. 'auto' is corpus-aware and resolved by infer/compile; a bare HTTP
+   * AbstractStepFn produced here treats 'auto' as 'none' (no corpus visible at this layer).
+   */
+  responseNamespace?: ResponseNamespace;
 }
 
 /** A segment is "dynamic" (a runtime id) if it is all digits, a UUID, or a long hex/token. */
@@ -223,6 +231,7 @@ function parseRawResponse(raw: string): { status: number; body: unknown } {
  * Pass `classify` to map a shape to a friendly tag (e.g. -> "CUSTOMER").
  */
 export function makeAbstractHttpStep(opts: HttpAbstractOptions = {}): AbstractStepFn {
+  const policy = opts.responseNamespace ?? "none";
   return (step) => {
     const verb = templatizeVerb(step.verb);
     const { status, body } = parseRawResponse(step.response);
@@ -231,7 +240,10 @@ export function makeAbstractHttpStep(opts: HttpAbstractOptions = {}): AbstractSt
       const tag = opts.classify(body, status);
       if (tag) shape = tag;
     }
-    const responseType = `${status} ${shape}`;
+    const responseTypeRaw = `${status} ${shape}`;
+    // 'auto' is resolved corpus-wide upstream; at this bare-function layer it is a no-op ('none').
+    const responseType =
+      policy === "by-verb" ? namespaceResponseType(responseTypeRaw, verb) : responseTypeRaw;
     return { symbol: `${verb}/${responseType}`, verb, responseType };
   };
 }
