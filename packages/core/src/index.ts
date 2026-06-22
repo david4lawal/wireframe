@@ -10,7 +10,7 @@
  */
 
 // Public data types.
-export type { Step, Session, ProtocolModel, CompileReport } from "./types.js";
+export type { Step, Session, ProtocolModel, CompileReport, Transition } from "./types.js";
 
 // Recording.
 export { Recorder, record, recordMockSessions, recordOne, MOCK_SCRIPTS } from "./recorder.js";
@@ -25,7 +25,7 @@ export type { LearnedFsm, MergeMode } from "./inference.js";
 
 // The compiled driver.
 export { Driver } from "./driver.js";
-export type { DriverStepResult } from "./driver.js";
+export type { DriverStepResult, Goal, NextCommand } from "./driver.js";
 
 // Abstraction (parameter templating).
 export {
@@ -35,6 +35,11 @@ export {
   abstractResponse,
   PARAMETER_FIELDS,
 } from "./abstract.js";
+export type { AbstractStepFn } from "./abstract.js";
+
+// HTTP transport + structural HTTP abstraction (REST / GraphQL).
+export { HttpAdapter, abstractHttpStep, makeAbstractHttpStep } from "./http.js";
+export type { HttpRequest, HttpAbstractOptions } from "./http.js";
 
 // Ground truth (for verification and the bench).
 export { GROUND_TRUTH, fsmStats } from "./groundTruth.js";

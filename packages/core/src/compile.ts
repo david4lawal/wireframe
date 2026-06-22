@@ -9,8 +9,8 @@
  *                            >= gate AND unsafeContinuationRate === 0.
  */
 
-import type { Session, ProtocolModel, CompileReport } from "./types.js";
-import { abstractSession, PARAMETER_FIELDS } from "./abstract.js";
+import type { Session, ProtocolModel, CompileReport, Transition } from "./types.js";
+import { abstractStep, PARAMETER_FIELDS, type AbstractStepFn } from "./abstract.js";
 import { inferFsm, type MergeMode } from "./inference.js";
 import { Driver } from "./driver.js";
 import { coverage as coverageOf, unsafeContinuation } from "./validate.js";
@@ -18,17 +18,40 @@ import { coverage as coverageOf, unsafeContinuation } from "./validate.js";
 export interface InferOptions {
   merge?: MergeMode;
   k?: number;
+  /** Abstraction function used to turn concrete steps into symbols. Defaults to the text abstractStep. */
+  abstract?: AbstractStepFn;
+}
+
+/** Derive the request verb from a symbol "VERB/RESPONSE_TYPE" (fallback when no map entry exists). */
+function verbFromSymbol(symbol: string): string {
+  return symbol.split("/")[0] ?? "";
 }
 
 /** Infer a protocol model from observed sessions. Default merge strategy is evidence-driven red-blue. */
 export function infer(sessions: Session[], opts: InferOptions = {}): ProtocolModel {
   const mode: MergeMode = opts.merge ?? "red-blue";
   const k = opts.k ?? 2;
-  const traces = sessions.map((s) => abstractSession(s.steps));
+  const abstract = opts.abstract ?? abstractStep;
+
+  // Abstract every training step, building both the symbol traces AND a symbol -> verb map so we
+  // can attach the request verb to each learned transition (action selection planning uses it).
+  const symbolToVerb = new Map<string, string>();
+  const traces = sessions.map((s) =>
+    s.steps.map((step) => {
+      const a = abstract(step);
+      if (!symbolToVerb.has(a.symbol)) symbolToVerb.set(a.symbol, a.verb);
+      return a.symbol;
+    })
+  );
+
   const fsm = inferFsm(traces, mode, k);
+  const transitions: Transition[] = fsm.transitions.map((t) => ({
+    ...t,
+    verb: symbolToVerb.get(t.on) ?? verbFromSymbol(t.on),
+  }));
   return {
     states: fsm.states,
-    transitions: fsm.transitions,
+    transitions,
     abstraction: [...PARAMETER_FIELDS],
   };
 }
@@ -36,6 +59,8 @@ export function infer(sessions: Session[], opts: InferOptions = {}): ProtocolMod
 export interface CompileOptions {
   coverageGate: number;
   heldOut: Session[];
+  /** Abstraction function used to validate held-out sessions. MUST match the one used to infer(). */
+  abstract?: AbstractStepFn;
 }
 
 /**
@@ -47,9 +72,10 @@ export function compile(
   model: ProtocolModel,
   opts: CompileOptions
 ): { driver: Driver; report: CompileReport } {
+  const abstract = opts.abstract ?? abstractStep;
   const driver = Driver.fromModel(model);
-  const cov = coverageOf(driver, opts.heldOut);
-  const unsafe = unsafeContinuation(driver, opts.heldOut);
+  const cov = coverageOf(driver, opts.heldOut, abstract);
+  const unsafe = unsafeContinuation(driver, opts.heldOut, abstract);
   const passed = cov >= opts.coverageGate && unsafe.rate === 0;
   return {
     driver,

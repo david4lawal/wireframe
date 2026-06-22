@@ -51,18 +51,26 @@ export function abstractResponse(response: string): string {
   return `${status}_${kind}`.replace(/_+$/, "");
 }
 
-/** Abstract a single step into an alphabet symbol "VERB/RESPONSE_TYPE". */
-export function abstractStep(step: { verb: string; response: string }): {
+/**
+ * The shape of an abstraction function: map a concrete (verb, response) into a stable alphabet
+ * symbol plus the structural verb and response type. The default is the text `abstractStep` below;
+ * HTTP protocols supply `abstractHttpStep` from http.ts. Training (infer) and validation (compile)
+ * MUST use the same abstraction function so symbols line up.
+ */
+export type AbstractStepFn = (step: { verb: string; response: string }) => {
   symbol: string;
   verb: string;
   responseType: string;
-} {
+};
+
+/** Abstract a single step into an alphabet symbol "VERB/RESPONSE_TYPE". */
+export const abstractStep: AbstractStepFn = (step) => {
   const verb = abstractVerb(step.verb);
   const responseType = abstractResponse(step.response);
   return { symbol: `${verb}/${responseType}`, verb, responseType };
-}
+};
 
-/** Abstract a whole session (list of steps) into a list of symbols. */
-export function abstractSession(steps: Step[]): string[] {
-  return steps.map((s) => abstractStep(s).symbol);
+/** Abstract a whole session (list of steps) into a list of symbols, with an optional abstraction fn. */
+export function abstractSession(steps: Step[], abstract: AbstractStepFn = abstractStep): string[] {
+  return steps.map((s) => abstract(s).symbol);
 }

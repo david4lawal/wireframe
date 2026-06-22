@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T19:39:13.828Z",
+  "generatedAt": "2026-06-22T21:24:22.390Z",
   "version": 2,
   "passed": true,
   "protocol": {
@@ -29,7 +29,7 @@
     "invalidSequencesTested": 305,
     "learnedPathModelCalls": 0,
     "baselineModelCalls": 5,
-    "driverP50LatencyMs": 0.0002,
+    "driverP50LatencyMs": 0.0003,
     "driftDetected": true,
     "driftEscalatedSafely": true
   },
@@ -109,8 +109,8 @@
   ],
   "latency": {
     "driver": {
-      "p50": 0.0002,
-      "p95": 0.0003,
+      "p50": 0.0003,
+      "p95": 0.0004,
       "p99": 0.0005,
       "n": 5000,
       "unit": "ms"

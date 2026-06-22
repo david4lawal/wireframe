@@ -14,7 +14,7 @@ import type { Session } from "./types.js";
 import { GROUND_TRUTH, type Fsm } from "./groundTruth.js";
 import type { LearnedFsm } from "./inference.js";
 import { Driver } from "./driver.js";
-import { abstractSession, abstractStep } from "./abstract.js";
+import { abstractSession, abstractStep, type AbstractStepFn } from "./abstract.js";
 import { recordOne } from "./recorder.js";
 
 /* ------------------------------------------------------------------ */
@@ -108,11 +108,15 @@ function indexFsm(
 /* coverage (held-out valid sessions)                                  */
 /* ------------------------------------------------------------------ */
 
-export function coverage(driver: Driver, heldOut: Session[]): number {
+export function coverage(
+  driver: Driver,
+  heldOut: Session[],
+  abstract: AbstractStepFn = abstractStep
+): number {
   if (heldOut.length === 0) return 1;
   let ok = 0;
   for (const s of heldOut) {
-    const symbols = abstractSession(s.steps);
+    const symbols = abstractSession(s.steps, abstract);
     if (driver.run(symbols).accepted) ok++;
   }
   return ok / heldOut.length;
@@ -135,8 +139,12 @@ export interface UnsafeResult {
  * (so "unknown-symbol" is not why they fail): they are invalid purely because they are OUT OF
  * STATE, which is the hard case for a safety claim.
  */
-export function unsafeContinuation(driver: Driver, validSessions: Session[]): UnsafeResult {
-  const { prefixViolations, handCrafted } = generateInvalidSequences(driver, validSessions);
+export function unsafeContinuation(
+  driver: Driver,
+  validSessions: Session[],
+  abstract: AbstractStepFn = abstractStep
+): UnsafeResult {
+  const { prefixViolations, handCrafted } = generateInvalidSequences(driver, validSessions, abstract);
   const all = [...prefixViolations, ...handCrafted];
 
   let wrong = 0;
@@ -168,7 +176,8 @@ export function unsafeContinuation(driver: Driver, validSessions: Session[]): Un
 
 function generateInvalidSequences(
   driver: Driver,
-  validSessions: Session[]
+  validSessions: Session[],
+  abstract: AbstractStepFn = abstractStep
 ): { prefixViolations: string[][]; handCrafted: string[][] } {
   const alphabet = new Set<string>();
   for (const t of driver.transitions) alphabet.add(t.on);
@@ -176,7 +185,7 @@ function generateInvalidSequences(
 
   const prefixViolations: string[][] = [];
   for (const session of validSessions) {
-    const symbols = abstractSession(session.steps);
+    const symbols = abstractSession(session.steps, abstract);
     for (let len = 0; len <= symbols.length; len++) {
       const prefix = symbols.slice(0, len);
       if (!driver.run(prefix).accepted) continue;
