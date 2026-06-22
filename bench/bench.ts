@@ -15,6 +15,7 @@
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   GROUND_TRUTH,
@@ -35,10 +36,10 @@ import {
   percentile,
   type Session,
   type MergeMode,
-} from "@wireframe/core";
+} from "@wframe/core";
 
-const BENCH_DIR = "C:/Users/David/ideas/wireframe/bench";
-const WEB_DATA_DIR = "C:/Users/David/ideas/wireframe/web/public/data";
+const BENCH_DIR = dirname(fileURLToPath(import.meta.url));
+const WEB_DATA_DIR = join(BENCH_DIR, "..", "web", "public", "data");
 
 /** A tiny seeded PRNG (mulberry32) so any sampling in the bench is reproducible. */
 function mulberry32(seed: number): () => number {

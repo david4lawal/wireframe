@@ -1,7 +1,7 @@
 /**
  * types.ts
  *
- * Public data types for @wireframe/core. Kept dependency free so they can be imported
+ * Public data types for @wframe/core. Kept dependency free so they can be imported
  * anywhere (tests, CLI, bench) without pulling in transport code.
  */
 

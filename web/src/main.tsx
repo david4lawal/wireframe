@@ -631,11 +631,11 @@ function GetStarted() {
       </div>
       <div className="start">
         <div className="start__code">
-          <div className="install"><span className="prompt">$</span><span className="mono" style={{ flex: 1 }}>npm i @wireframe/core</span><Copyable text="npm i @wireframe/core" /></div>
+          <div className="install"><span className="prompt">$</span><span className="mono" style={{ flex: 1 }}>npm i @wframe/core</span><Copyable text="npm i @wframe/core" /></div>
           <div className="term">
             <div className="term__bar"><span className="term__dot" /><span className="term__tab mono">compile.ts</span></div>
             <pre>
-<span className="k">import</span> {'{ Recorder, infer, compile }'} <span className="k">from</span> <span className="s">'@wireframe/core'</span>{'\n\n'}
+<span className="k">import</span> {'{ Recorder, infer, compile }'} <span className="k">from</span> <span className="s">'@wframe/core'</span>{'\n\n'}
 <span className="c">// 1. record successful agent sessions (no SDK, no source)</span>{'\n'}
 <span className="k">const</span> sessions = <span className="k">new</span> <span className="s">Recorder</span>(){'\n'}
 sessions.<span className="s">observe</span>(trace){'\n\n'}
@@ -653,7 +653,7 @@ driver.<span className="s">step</span>(symbol)   <span className="c">// escalate
           <div className="track">
             <h4>Self-host <span>OPEN SOURCE</span></h4>
             <p>The recorder, the inference engine, the conformance gate, and the runtime are open and inspectable.</p>
-            <a className="btn" href="https://github.com" target="_blank" rel="noreferrer"><Github size={14} /> View on GitHub</a>
+            <a className="btn" href="https://github.com/david4lawal/wireframe" target="_blank" rel="noreferrer"><Github size={14} /> View on GitHub</a>
           </div>
           <div className="track">
             <h4>Hosted <span>SOON</span></h4>
@@ -696,7 +696,7 @@ const DOCS_SECTIONS = [
   { id: 'hosted', label: 'Hosted' },
 ]
 
-const QUICKSTART = `import { Recorder, infer, compile } from '@wireframe/core'
+const QUICKSTART = `import { Recorder, infer, compile } from '@wframe/core'
 
 // 1. Record a few successful sessions. No SDK, no source code.
 const recorder = new Recorder()
@@ -725,12 +725,12 @@ wireframe inspect ./driver.json
 # Run the learned path through an adapter
 wireframe run ./driver.json --adapter mock`
 
-const AI_ONBOARD_PROMPT = `You are integrating Wireframe (@wireframe/core) into my agent so it can operate a black-box, stateful system deterministically.
+const AI_ONBOARD_PROMPT = `You are integrating Wireframe (@wframe/core) into my agent so it can operate a black-box, stateful system deterministically.
 
 What Wireframe does: it records a few successful protocol sessions, infers the protocol's state machine, and compiles a "driver" that runs the learned path with zero model calls and escalates back to you on anything it has not seen.
 
 Do this:
-1. Install: npm i @wireframe/core
+1. Install: npm i @wframe/core
 2. Identify the stateful system my agent talks to: its transport (websocket, tcp, or mcp) and its message shape (the request "verb" and the response type).
 3. Capture at least 5 successful sessions, each shaped as { steps: [{ verb, response }], outcome: "success" }. Use "new Recorder()" and "recorder.observe(session)".
 4. Infer the model: const model = infer(recorder.sessions)
@@ -742,7 +742,7 @@ Hard rules:
 - The driver is the fast path; the model is the fallback.
 - After compiling, report coverage and unsafeContinuationRate. unsafeContinuationRate must be 0.
 
-Reference: https://wframe.org/docs   Package: @wireframe/core`
+Reference: https://wframe.org/docs   Package: @wframe/core`
 
 function Docs({ theme, onTheme, onSection, onNav }: { theme: 'dark' | 'light'; onTheme: () => void; onSection: (id: string) => void; onNav: (to: string) => void }) {
   const go = (id: string) => document.getElementById(id)?.scrollIntoView()
@@ -774,7 +774,7 @@ function Docs({ theme, onTheme, onSection, onNav }: { theme: 'dark' | 'light'; o
             <section id="install" className="docs__sec">
               <h2>Install</h2>
               <p>Requires Node 18 or newer. The <code>wireframe</code> CLI ships with the package.</p>
-              <div className="install"><span className="prompt">$</span><span className="mono" style={{ flex: 1 }}>npm i @wireframe/core</span><Copyable text="npm i @wireframe/core" /></div>
+              <div className="install"><span className="prompt">$</span><span className="mono" style={{ flex: 1 }}>npm i @wframe/core</span><Copyable text="npm i @wframe/core" /></div>
             </section>
 
             <section id="concepts" className="docs__sec">
@@ -837,7 +837,7 @@ function Docs({ theme, onTheme, onSection, onNav }: { theme: 'dark' | 'light'; o
 
         <footer className="footer wrap">
           <span>Wireframe / deterministic execution layer for agents</span>
-          <span style={{ display: 'flex', gap: 18 }}><button onClick={() => onNav('/')}>Home</button><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a></span>
+          <span style={{ display: 'flex', gap: 18 }}><button onClick={() => onNav('/')}>Home</button><a href="https://github.com/david4lawal/wireframe" target="_blank" rel="noreferrer">GitHub</a></span>
         </footer>
       </div>
     </>
@@ -898,7 +898,7 @@ function App() {
 
         <footer className="footer wrap">
           <span>Wireframe / deterministic execution layer for agents</span>
-          <span style={{ display: 'flex', gap: 18 }}><a href="/docs" onClick={(e) => { e.preventDefault(); navigate('/docs') }}>Docs</a><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a><a href="#proof">Proof</a></span>
+          <span style={{ display: 'flex', gap: 18 }}><a href="/docs" onClick={(e) => { e.preventDefault(); navigate('/docs') }}>Docs</a><a href="https://github.com/david4lawal/wireframe" target="_blank" rel="noreferrer">GitHub</a><a href="#proof">Proof</a></span>
         </footer>
       </div>
       <WaitlistModal />

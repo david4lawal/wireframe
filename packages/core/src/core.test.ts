@@ -1,7 +1,7 @@
 /**
  * core.test.ts (vitest)
  *
- * Tests for @wireframe/core:
+ * Tests for @wframe/core:
  *  (1) infer('red-blue') yields exactly 3 states and matches ground truth.
  *  (2) infer('none') yields the raw tree (many states); infer('rpni') over-generalizes (fewer
  *      states than truth AND accepts an illegal sequence) so the default is non-trivial.

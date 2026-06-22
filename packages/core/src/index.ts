@@ -1,5 +1,5 @@
 /**
- * @wireframe/core
+ * @wframe/core
  *
  * Infer a protocol FSM from black-box agent sessions, compile a safe deterministic driver, and
  * prove it. No LLM on the learned path.

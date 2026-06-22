@@ -1,5 +1,5 @@
 {
-  "name": "@wireframe/core",
+  "name": "@wframe/core",
   "version": "1.0.0",
   "description": "Infer a protocol state machine from black-box agent sessions, compile a safe deterministic driver, and prove it. No LLM on the learned path.",
   "license": "MIT",

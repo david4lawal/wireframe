@@ -10,8 +10,8 @@
     "bench"
   ],
   "scripts": {
-    "build": "npm run build --workspace @wireframe/core && npm run build --workspace @wireframe/cli",
-    "test": "npm run test --workspace @wireframe/core",
-    "bench": "npm run bench --workspace @wireframe/bench"
+    "build": "npm run build --workspace @wframe/core && npm run build --workspace @wframe/cli",
+    "test": "npm run test --workspace @wframe/core",
+    "bench": "npm run bench --workspace @wframe/bench"
   }
 }

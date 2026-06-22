@@ -1,5 +1,5 @@
 {
-  "name": "@wireframe/bench",
+  "name": "@wframe/bench",
   "version": "1.0.0",
   "description": "The Wireframe proof harness: computes every metric by running real code and writes results.json (version 2).",
   "type": "module",
@@ -7,7 +7,7 @@
     "bench": "tsx bench.ts"
   },
   "dependencies": {
-    "@wireframe/core": "1.0.0"
+    "@wframe/core": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

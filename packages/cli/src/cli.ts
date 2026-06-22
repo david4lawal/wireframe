@@ -25,7 +25,7 @@ import {
   TcpAdapter,
   type Adapter,
   type Session,
-} from "@wireframe/core";
+} from "@wframe/core";
 
 type AdapterKind = "auto" | "ws" | "tcp" | "mock";
 

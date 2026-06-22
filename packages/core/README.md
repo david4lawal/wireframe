@@ -1,4 +1,4 @@
-# @wireframe/core
+# @wframe/core
 
 Infer a protocol state machine from black-box agent sessions, compile a safe deterministic driver, and prove it. No LLM on the learned path.
 
@@ -7,13 +7,13 @@ Part of [Wireframe](https://wframe.org). Full documentation: https://wframe.org/
 ## Install
 
 ```
-npm i @wireframe/core
+npm i @wframe/core
 ```
 
 ## Use
 
 ```ts
-import { Recorder, infer, compile } from '@wireframe/core'
+import { Recorder, infer, compile } from '@wframe/core'
 
 // 1. Record a few successful sessions. No SDK, no source code.
 const recorder = new Recorder()

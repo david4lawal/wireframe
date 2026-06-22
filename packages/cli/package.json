@@ -1,5 +1,5 @@
 {
-  "name": "@wireframe/cli",
+  "name": "@wframe/cli",
   "version": "1.0.0",
   "description": "The wireframe CLI: compile a protocol target into a safe deterministic driver, run a driver, and inspect a driver.",
   "type": "module",
@@ -15,7 +15,7 @@
     "start": "node dist/cli.js"
   },
   "dependencies": {
-    "@wireframe/core": "1.0.0"
+    "@wframe/core": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

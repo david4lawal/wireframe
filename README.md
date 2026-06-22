@@ -35,11 +35,11 @@ The live numbers render at [wframe.org](https://wframe.org), shown only when the
 ## Install
 
 ```
-npm i @wireframe/core
+npm i @wframe/core
 ```
 
 ```ts
-import { Recorder, infer, compile } from '@wireframe/core'
+import { Recorder, infer, compile } from '@wframe/core'
 
 const recorder = new Recorder()
 recorder.observe(session)        // { steps: [{ verb, response }], outcome: 'success' }
@@ -62,8 +62,8 @@ wireframe run ./driver.json --adapter mock    # drive the learned path
 ## Repository
 
 ```
-packages/core   @wireframe/core   the library: inference, driver, adapters
-packages/cli    @wireframe/cli    the wireframe CLI
+packages/core   @wframe/core   the library: inference, driver, adapters
+packages/cli    @wframe/cli    the wireframe CLI
 bench           the self-verifying proof harness
 web             the landing page and docs (Vite + React)
 worker          the privacy-preserving waitlist backend (Cloudflare Worker)
@@ -73,7 +73,7 @@ worker          the privacy-preserving waitlist backend (Cloudflare Worker)
 
 ```
 npm install            # installs all workspaces
-npm test               # @wireframe/core unit tests
+npm test               # @wframe/core unit tests
 npm run bench          # the proof harness
 
 cd web && npm install && npm run dev        # the site, on http://localhost:5188
