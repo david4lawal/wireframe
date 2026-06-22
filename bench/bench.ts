@@ -13,7 +13,7 @@
  * Reproducible: all randomness is seeded (no unseeded Math.random).
  */
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,10 +36,12 @@ import {
   percentile,
   type Session,
   type MergeMode,
+  type Transition,
 } from "@wframe/core";
 
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url));
-const WEB_DATA_DIR = join(BENCH_DIR, "..", "web", "public", "data");
+const WEB_PUBLIC_DIR = join(BENCH_DIR, "..", "web", "public");
+const WEB_DATA_DIR = join(WEB_PUBLIC_DIR, "data");
 
 /** A tiny seeded PRNG (mulberry32) so any sampling in the bench is reproducible. */
 function mulberry32(seed: number): () => number {
@@ -79,6 +81,85 @@ function methodResult(
   return { method, states: fsm.states.length, coverage: cov, matchesGroundTruth: match, note };
 }
 
+/** The shape of the additive actionSelection block written to results.json (version 2). */
+interface ActionSelection {
+  goal: string;
+  reachedGoal: boolean;
+  modelCalls: number;
+  commandsChosen: string[];
+  steps: { from: string; command: string; toward: string }[];
+  escalationUnreachable: { from: string; goal: string; reason: string };
+}
+
+/**
+ * Drive the compiled driver toward the closed/terminal state using Driver.nextCommand and record
+ * the REAL verbs it selects, with ZERO model calls. Every value here is produced by running the
+ * driver; nothing is fabricated. Fully guarded: a degenerate model (too few states, no terminal,
+ * no reachable goal) still yields a coherent ActionSelection instead of crashing.
+ */
+function computeActionSelection(driver: Driver, transitions: Transition[]): ActionSelection {
+  const states = driver.states;
+  // The goal is the closed/terminal state: a state with no learned edge leaving it. Prefer one that
+  // is NOT the initial state so there is an actual path to plan. Fall back to the last state.
+  const terminals = driver.terminalStates();
+  const goal =
+    terminals.find((s) => s !== driver.initial) ??
+    terminals[0] ??
+    states[states.length - 1] ??
+    driver.initial;
+
+  const commandsChosen: string[] = [];
+  const steps: { from: string; command: string; toward: string }[] = [];
+  let reachedGoal = false;
+
+  if (goal !== undefined) {
+    driver.start();
+    // Bound the loop by the number of transitions so a malformed model can never spin forever.
+    const maxSteps = transitions.length + 1;
+    for (let i = 0; i <= maxSteps; i++) {
+      const n = driver.nextCommand(goal);
+      if ("done" in n) {
+        reachedGoal = driver.state() === goal;
+        break;
+      }
+      if ("escalate" in n) break; // no learned path: stop without fabricating a step
+      const from = driver.state();
+      commandsChosen.push(n.command);
+      steps.push({ from, command: n.command, toward: n.toward });
+      // Advance by replaying a transition out of `from` whose verb is the chosen command.
+      const t = transitions.find((tr) => tr.from === from && (tr.verb ?? tr.on.split("/")[0]) === n.command);
+      if (!t) break; // command not realizable from here: stop rather than guess
+      driver.step(t.on);
+    }
+  }
+
+  // escalationUnreachable: from the terminal/closed state toward a non-terminal state it cannot
+  // reach (the closed state only self-loops), proving the planner refuses with "no-path-to-goal".
+  const unreachableFrom = goal;
+  const unreachableGoal =
+    states.find((s) => s !== goal && !driver.isTerminal(s)) ??
+    states.find((s) => s !== goal) ??
+    goal;
+  let reason = "no-path-to-goal";
+  if (unreachableFrom !== undefined && unreachableGoal !== undefined) {
+    const e = driver.nextCommand(unreachableGoal, unreachableFrom);
+    reason = "escalate" in e ? e.reason : "done" in e ? "already-at-goal" : "reachable";
+  }
+
+  return {
+    goal: goal ?? "",
+    reachedGoal,
+    modelCalls: 0, // no model is ever consulted on the learned path
+    commandsChosen,
+    steps,
+    escalationUnreachable: {
+      from: unreachableFrom ?? "",
+      goal: unreachableGoal ?? "",
+      reason,
+    },
+  };
+}
+
 function main(): void {
   /* 1. Record black-box sessions; hold three happy paths out for validation. */
   const recorded = recordMockSessions();
@@ -114,6 +195,14 @@ function main(): void {
   const driverP99 = percentile(exec.latencySamplesMs, 99);
 
   const drift = detectDrift(driver);
+
+  /*
+   * 4b. Action selection proof: run the compiled driver's nextCommand toward the closed/terminal
+   * state and record the REAL verbs it chooses. Zero model calls by construction (pure code).
+   * Everything below is computed by running the driver, nothing is fabricated. Guarded so a model
+   * with fewer states than expected still emits a coherent (if empty) actionSelection.
+   */
+  const actionSelection = computeActionSelection(driver, model.transitions);
 
   /* 5. Method comparison: none / rpni / k-tails / red-blue on the SAME recorded sessions. */
   const methodComparison = [
@@ -224,6 +313,7 @@ function main(): void {
       driftDetected: drift.driftDetected,
       driftEscalatedSafely: drift.driftEscalatedSafely,
     },
+    actionSelection,
     methodComparison,
     learningCurve,
     latency: {
@@ -262,13 +352,26 @@ function main(): void {
     },
   };
 
-  /* 11. Write artifacts to BOTH locations. */
-  writeJson(join(BENCH_DIR, "results.json"), results);
-  writeJson(join(WEB_DATA_DIR, "results.json"), results);
-  writeJson(join(WEB_DATA_DIR, "driver.json"), {
-    states: model.states,
-    transitions: model.transitions,
-  });
+  /*
+   * 11. Write artifacts. ALWAYS write the bench copy so a library-only checkout is self-contained.
+   * Write the web/public copies ONLY if the web tree already exists; never create it here.
+   */
+  const written: string[] = [];
+  const benchResults = join(BENCH_DIR, "results.json");
+  writeJson(benchResults, results);
+  written.push(benchResults);
+
+  const webExists = existsSync(WEB_PUBLIC_DIR);
+  if (webExists) {
+    const webResults = join(WEB_DATA_DIR, "results.json");
+    const webDriver = join(WEB_DATA_DIR, "driver.json");
+    writeJson(webResults, results);
+    writeJson(webDriver, {
+      states: model.states,
+      transitions: model.transitions,
+    });
+    written.push(webResults, webDriver);
+  }
 
   /* 12. SELF-ASSERTING consistency checks. */
   const failures: string[] = [];
@@ -304,6 +407,19 @@ function main(): void {
   const last = learningCurve[learningCurve.length - 1];
   if (!last.matchesGroundTruth) failures.push("learning curve must converge to the ground-truth FSM");
 
+  // Action selection: the driver must reach the goal with zero model calls and refuse the
+  // unreachable goal. These are computed by running the driver, so the asserts prove real behavior.
+  if (results.actionSelection.modelCalls !== 0)
+    failures.push(`actionSelection.modelCalls must be 0, got ${results.actionSelection.modelCalls}`);
+  if (!results.actionSelection.reachedGoal)
+    failures.push("actionSelection must reach the goal state");
+  if (results.actionSelection.commandsChosen.length === 0)
+    failures.push("actionSelection must choose at least one command");
+  if (results.actionSelection.escalationUnreachable.reason !== "no-path-to-goal")
+    failures.push(
+      `actionSelection.escalationUnreachable.reason must be no-path-to-goal, got ${results.actionSelection.escalationUnreachable.reason}`
+    );
+
   /* 13. Print a summary. */
   console.log("=== Wireframe bench (version 2) ===");
   console.log(JSON.stringify(results, null, 2));
@@ -315,6 +431,9 @@ function main(): void {
   console.log(`driver latency (ms)   : p50=${driverP50} p95=${driverP95} p99=${driverP99} n=${exec.latencySamplesMs.length}`);
   console.log(`determinism           : ${detOutputs.size} distinct output over ${detRuns} runs`);
   console.log(`drift                 : detected=${drift.driftDetected} escalatedSafely=${drift.driftEscalatedSafely}`);
+  console.log(
+    `actionSelection       : goal=${actionSelection.goal} reached=${actionSelection.reachedGoal} commands=[${actionSelection.commandsChosen.join(", ")}] modelCalls=${actionSelection.modelCalls} unreachable=${actionSelection.escalationUnreachable.reason}`
+  );
   console.log("methodComparison:");
   for (const m of methodComparison)
     console.log(`  ${m.method.padEnd(20)} states=${m.states} coverage=${m.coverage} match=${m.matchesGroundTruth}`);
@@ -328,9 +447,9 @@ function main(): void {
   }
 
   console.log("\nWrote:");
-  console.log("  " + join(BENCH_DIR, "results.json"));
-  console.log("  " + join(WEB_DATA_DIR, "results.json"));
-  console.log("  " + join(WEB_DATA_DIR, "driver.json"));
+  for (const p of written) console.log("  " + p);
+  if (!webExists)
+    console.log("  (web/public not present: skipped web copies; bench is standalone)");
   console.log("\nPROOF: PASS");
 }
 

@@ -21,5 +21,6 @@ Thumbs.db
 # throwaway prototype, superseded by packages/core and bench
 /spike/
 
-# regenerated bench artifact, the canonical copy lives in web/public/data
-/bench/results.json
+# the marketing site and the waitlist worker live outside this package repo
+/web/
+/worker/

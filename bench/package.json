@@ -7,7 +7,7 @@
     "bench": "tsx bench.ts"
   },
   "dependencies": {
-    "@wframe/core": "1.0.0"
+    "@wframe/core": "*"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

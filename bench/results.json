@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T21:24:22.390Z",
+  "generatedAt": "2026-06-22T22:03:43.063Z",
   "version": 2,
   "passed": true,
   "protocol": {
@@ -29,9 +29,35 @@
     "invalidSequencesTested": 305,
     "learnedPathModelCalls": 0,
     "baselineModelCalls": 5,
-    "driverP50LatencyMs": 0.0003,
+    "driverP50LatencyMs": 0.0002,
     "driftDetected": true,
     "driftEscalatedSafely": true
+  },
+  "actionSelection": {
+    "goal": "q2",
+    "reachedGoal": true,
+    "modelCalls": 0,
+    "commandsChosen": [
+      "LOGIN",
+      "LOGOUT"
+    ],
+    "steps": [
+      {
+        "from": "q0",
+        "command": "LOGIN",
+        "toward": "q1"
+      },
+      {
+        "from": "q1",
+        "command": "LOGOUT",
+        "toward": "q2"
+      }
+    ],
+    "escalationUnreachable": {
+      "from": "q2",
+      "goal": "q0",
+      "reason": "no-path-to-goal"
+    }
   },
   "methodComparison": [
     {
@@ -109,9 +135,9 @@
   ],
   "latency": {
     "driver": {
-      "p50": 0.0003,
-      "p95": 0.0004,
-      "p99": 0.0005,
+      "p50": 0.0002,
+      "p95": 0.0003,
+      "p99": 0.0006,
       "n": 5000,
       "unit": "ms"
     },
@@ -176,52 +202,62 @@
       {
         "from": "q0",
         "on": "LIST/ERR_NOAUTH",
-        "to": "q0"
+        "to": "q0",
+        "verb": "LIST"
       },
       {
         "from": "q0",
         "on": "LOGIN/OK_GREETING",
-        "to": "q1"
+        "to": "q1",
+        "verb": "LOGIN"
       },
       {
         "from": "q1",
         "on": "GET/ERR_NOTFOUND",
-        "to": "q1"
+        "to": "q1",
+        "verb": "GET"
       },
       {
         "from": "q1",
         "on": "GET/OK_ITEM",
-        "to": "q1"
+        "to": "q1",
+        "verb": "GET"
       },
       {
         "from": "q1",
         "on": "LIST/OK_ITEMS",
-        "to": "q1"
+        "to": "q1",
+        "verb": "LIST"
       },
       {
         "from": "q1",
         "on": "LOGIN/ERR_ALREADYAUTH",
-        "to": "q1"
+        "to": "q1",
+        "verb": "LOGIN"
       },
       {
         "from": "q1",
         "on": "LOGOUT/OK_BYE",
-        "to": "q2"
+        "to": "q2",
+        "verb": "LOGOUT"
       },
       {
         "from": "q1",
         "on": "PING/OK_PONG",
-        "to": "q1"
+        "to": "q1",
+        "verb": "PING"
       },
       {
         "from": "q2",
         "on": "LIST/ERR_CLOSED",
-        "to": "q2"
+        "to": "q2",
+        "verb": "LIST"
       },
       {
         "from": "q2",
         "on": "PING/ERR_CLOSED",
-        "to": "q2"
+        "to": "q2",
+        "verb": "PING"
       }
     ]
   }

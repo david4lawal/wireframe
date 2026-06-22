@@ -27,7 +27,7 @@ With the compiled driver: **100%** held-out coverage, **0** unsafe continuations
 
 ```
 npm install
-npm run bench    # prints PROOF: PASS and writes web/public/data/results.json
+npm run bench    # prints PROOF: PASS and writes bench/results.json
 ```
 
 The live numbers render at [wframe.org](https://wframe.org), shown only when the run passes its own self-check.
@@ -62,25 +62,22 @@ wireframe run ./driver.json --adapter mock    # drive the learned path
 ## Repository
 
 ```
-packages/core   @wframe/core   the library: inference, driver, adapters
-packages/cli    @wframe/cli    the wireframe CLI
-bench           the self-verifying proof harness
-web             the landing page and docs (Vite + React)
-worker          the privacy-preserving waitlist backend (Cloudflare Worker)
+packages/core         @wframe/core   the library: inference, driver (action selection), adapters
+packages/cli          @wframe/cli    the wireframe CLI
+packages/core/demos   runnable coffee and HTTP demos
+bench                 the self-verifying proof harness
 ```
 
 ## Run it yourself
 
 ```
-npm install            # installs all workspaces
+npm install            # installs the workspaces
 npm test               # @wframe/core unit tests
-npm run bench          # the proof harness
+npm run bench          # the proof harness, prints PROOF: PASS
 
-cd web && npm install && npm run dev        # the site, on http://localhost:5188
-cd worker && npm install && npx wrangler dev # the waitlist API, on http://localhost:8787
+npm run demo:coffee -w @wframe/core   # the driver chooses commands toward a goal
+npm run demo:http   -w @wframe/core   # the same, over a live local REST API
 ```
-
-The web app reads `VITE_WAITLIST_URL` (see `web/.env.example`). The worker is a template: create your own KV namespace and secret as described in `worker/README.md`.
 
 ## Research
 
