@@ -1,0 +1,32 @@
+name = "wireframe-waitlist"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+# KV namespace binding. The worker reads and writes everything through this
+# single namespace: encrypted records (e:<hash>), dedupe markers, per IP rate
+# limit counters (rl:<ip>), and the aggregate count (meta:count).
+#
+# The "id" below is a placeholder used so that `npx wrangler dev` can start. In
+# local dev (Miniflare) the id is not contacted: KV is stored on disk under
+# .wrangler/state and persists between runs. See preview_id for the dev value.
+#
+# To create the REAL production namespace, run:
+#   npx wrangler kv namespace create WAITLIST
+# That command prints a real id. Paste it into "id" below before you deploy.
+# (Optionally also run `npx wrangler kv namespace create WAITLIST --preview`
+# and paste its id into preview_id.)
+[[kv_namespaces]]
+binding = "WAITLIST"
+id = "placeholder_replace_after_wrangler_kv_namespace_create"
+preview_id = "placeholder_local_dev_preview"
+
+[vars]
+# Production origin allowed by CORS. Override per environment or set the real
+# value here before deploying. Localhost dev origins are always allowed.
+ALLOWED_ORIGIN = "https://your-site.example.com"
+
+# Persist local KV to disk so dev data survives restarts (Miniflare default
+# location is .wrangler/state). No Docker is involved: wrangler dev runs a
+# local Workers runtime (workerd) plus Miniflare for KV.
+[dev]
+port = 8787
