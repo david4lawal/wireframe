@@ -1,0 +1,17 @@
+{
+  "name": "wireframe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wireframe: infer a protocol FSM from black-box agent sessions, compile a safe deterministic driver, prove it. No LLM on the learned path.",
+  "workspaces": [
+    "packages/core",
+    "packages/cli",
+    "bench"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @wireframe/core && npm run build --workspace @wireframe/cli",
+    "test": "npm run test --workspace @wireframe/core",
+    "bench": "npm run bench --workspace @wireframe/bench"
+  }
+}
