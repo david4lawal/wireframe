@@ -1,0 +1,228 @@
+{
+  "generatedAt": "2026-06-22T18:24:00.392Z",
+  "version": 2,
+  "passed": true,
+  "protocol": {
+    "name": "legacy-session-text-protocol",
+    "groundTruth": {
+      "states": 3,
+      "transitions": 10
+    }
+  },
+  "learning": {
+    "sessionsObserved": 7,
+    "messagesObserved": 30,
+    "statesInferred": 3,
+    "transitionsInferred": 10,
+    "fsmMatchesGroundTruth": true,
+    "parameterFieldsAbstracted": [
+      "token",
+      "id",
+      "timestamp"
+    ]
+  },
+  "metrics": {
+    "coverage": 1,
+    "coverageGate": 0.95,
+    "heldOutSessions": 3,
+    "unsafeContinuationRate": 0,
+    "invalidSequencesTested": 305,
+    "learnedPathModelCalls": 0,
+    "baselineModelCalls": 5,
+    "driverP50LatencyMs": 0.0002,
+    "driftDetected": true,
+    "driftEscalatedSafely": true
+  },
+  "methodComparison": [
+    {
+      "method": "prefix-tree (none)",
+      "states": 24,
+      "coverage": 0.3333333333333333,
+      "matchesGroundTruth": false,
+      "note": "Raw APTA, no merging: many states, does not generalize to held-out sessions."
+    },
+    {
+      "method": "rpni",
+      "states": 1,
+      "coverage": 1,
+      "matchesGroundTruth": false,
+      "note": "Naive greedy RPNI on positive-only data over-generalizes: collapses states and accepts illegal sequences."
+    },
+    {
+      "method": "k-tails (k=2)",
+      "states": 11,
+      "coverage": 0.3333333333333333,
+      "matchesGroundTruth": false,
+      "note": "Classic k-tails under-generalizes on truncated finite traces: too many states."
+    },
+    {
+      "method": "red-blue (ours)",
+      "states": 3,
+      "coverage": 1,
+      "matchesGroundTruth": true,
+      "note": "Evidence-driven red-blue / EDSM merging converges to the true minimal FSM."
+    }
+  ],
+  "learningCurve": [
+    {
+      "sessions": 1,
+      "states": 3,
+      "coverage": 0,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 2,
+      "states": 2,
+      "coverage": 0.3333333333333333,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 3,
+      "states": 2,
+      "coverage": 1,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 4,
+      "states": 2,
+      "coverage": 1,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 5,
+      "states": 2,
+      "coverage": 1,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 6,
+      "states": 2,
+      "coverage": 1,
+      "matchesGroundTruth": false
+    },
+    {
+      "sessions": 7,
+      "states": 3,
+      "coverage": 1,
+      "matchesGroundTruth": true
+    }
+  ],
+  "latency": {
+    "driver": {
+      "p50": 0.0002,
+      "p95": 0.0004,
+      "p99": 0.0006,
+      "n": 5000,
+      "unit": "ms"
+    },
+    "modelBaseline": {
+      "p50Ms": 350,
+      "estimated": true,
+      "source": "Estimate: a per-message LLM oracle round-trip is dominated by network plus generation latency, typically a few hundred ms. 350 ms is a conservative midpoint placeholder, NOT measured."
+    }
+  },
+  "conformance": {
+    "validSequences": {
+      "tested": 10,
+      "accepted": 10
+    },
+    "invalidSequences": {
+      "tested": 305,
+      "rejectedSafely": 305,
+      "unsafeContinuations": 0
+    },
+    "byCategory": [
+      {
+        "category": "valid-prefix-then-illegal-symbol",
+        "tested": 296,
+        "caught": 296
+      },
+      {
+        "category": "structural-traps",
+        "tested": 9,
+        "caught": 9
+      }
+    ]
+  },
+  "determinism": {
+    "runs": 1000,
+    "distinctOutputs": 1,
+    "note": "Same input replayed through the driver; a deterministic driver yields exactly one distinct output."
+  },
+  "driftScenarios": [
+    {
+      "name": "ping-drift (OK PONG-V2)",
+      "detected": true,
+      "escalatedSafely": true
+    },
+    {
+      "name": "ping-drift-immediate",
+      "detected": true,
+      "escalatedSafely": true
+    },
+    {
+      "name": "ping-drift-after-get",
+      "detected": true,
+      "escalatedSafely": true
+    }
+  ],
+  "emittedDriver": {
+    "states": [
+      "q0",
+      "q1",
+      "q2"
+    ],
+    "transitions": [
+      {
+        "from": "q0",
+        "on": "LIST/ERR_NOAUTH",
+        "to": "q0"
+      },
+      {
+        "from": "q0",
+        "on": "LOGIN/OK_GREETING",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "on": "GET/ERR_NOTFOUND",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "on": "GET/OK_ITEM",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "on": "LIST/OK_ITEMS",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "on": "LOGIN/ERR_ALREADYAUTH",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "on": "LOGOUT/OK_BYE",
+        "to": "q2"
+      },
+      {
+        "from": "q1",
+        "on": "PING/OK_PONG",
+        "to": "q1"
+      },
+      {
+        "from": "q2",
+        "on": "LIST/ERR_CLOSED",
+        "to": "q2"
+      },
+      {
+        "from": "q2",
+        "on": "PING/ERR_CLOSED",
+        "to": "q2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "states": [
+    "q0",
+    "q1",
+    "q2"
+  ],
+  "transitions": [
+    {
+      "from": "q0",
+      "on": "LIST/ERR_NOAUTH",
+      "to": "q0"
+    },
+    {
+      "from": "q0",
+      "on": "LOGIN/OK_GREETING",
+      "to": "q1"
+    },
+    {
+      "from": "q1",
+      "on": "GET/ERR_NOTFOUND",
+      "to": "q1"
+    },
+    {
+      "from": "q1",
+      "on": "GET/OK_ITEM",
+      "to": "q1"
+    },
+    {
+      "from": "q1",
+      "on": "LIST/OK_ITEMS",
+      "to": "q1"
+    },
+    {
+      "from": "q1",
+      "on": "LOGIN/ERR_ALREADYAUTH",
+      "to": "q1"
+    },
+    {
+      "from": "q1",
+      "on": "LOGOUT/OK_BYE",
+      "to": "q2"
+    },
+    {
+      "from": "q1",
+      "on": "PING/OK_PONG",
+      "to": "q1"
+    },
+    {
+      "from": "q2",
+      "on": "LIST/ERR_CLOSED",
+      "to": "q2"
+    },
+    {
+      "from": "q2",
+      "on": "PING/ERR_CLOSED",
+      "to": "q2"
+    }
+  ]
+}
