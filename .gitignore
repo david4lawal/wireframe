@@ -13,6 +13,9 @@ dist/
 # cloudflare local state
 .wrangler/
 
+# wireframe MCP runtime state (recorded sessions / compiled drivers)
+.wframe/
+
 # logs and os files
 *.log
 .DS_Store
@@ -24,3 +27,7 @@ Thumbs.db
 # the marketing site and the waitlist worker live outside this package repo
 /web/
 /worker/
+
+# internal strategy notes and design mockups (not part of the public package)
+/strategy/
+/mockups/

@@ -32,6 +32,8 @@ npm run bench    # prints PROOF: PASS and writes bench/results.json
 
 The live numbers render at [wframe.org](https://wframe.org), shown only when the run passes its own self-check.
 
+It is not only a controlled protocol. Wireframe learns **real** wire protocols too: `npm run demo:smtp:real` records a real Nodemailer SMTP server over a socket and drives the compiled driver to send a multi-recipient email with zero model calls; `npm run demo:postgres:real` recovers the Postgres transaction state machine (idle / in-transaction) from the raw binary wire protocol. No Docker, fully local.
+
 ## Install
 
 ```
@@ -59,12 +61,23 @@ wireframe inspect ./driver.json               # states, transitions, abstraction
 wireframe run ./driver.json --adapter mock    # drive the learned path
 ```
 
+## MCP server
+
+Use Wireframe from a coding agent (Claude Code, Codex) as an MCP server. The agent drives a target system through Wireframe to record sessions, compiles a driver, then runs a learned sub-workflow with a single deterministic tool call instead of N model-decided steps.
+
+```
+claude mcp add wireframe -- npx -y @wframe/mcp
+```
+
+Tools: `wireframe_step` (drive a target through Wireframe, recording the session), `wireframe_compile` (infer + compile behind the safety gate), `wireframe_run` (run the learned workflow deterministically, zero model calls), and `wireframe_status`. See [packages/mcp](packages/mcp).
+
 ## Repository
 
 ```
 packages/core         @wframe/core   the library: inference, driver (action selection), adapters
 packages/cli          @wframe/cli    the wireframe CLI
-packages/core/demos   runnable coffee and HTTP demos
+packages/mcp          @wframe/mcp    the MCP server for coding agents
+packages/core/demos   runnable demos, including the real SMTP and Postgres wire-protocol proofs
 bench                 the self-verifying proof harness
 ```
 
@@ -75,8 +88,10 @@ npm install            # installs the workspaces
 npm test               # @wframe/core unit tests
 npm run bench          # the proof harness, prints PROOF: PASS
 
-npm run demo:coffee -w @wframe/core   # the driver chooses commands toward a goal
-npm run demo:http   -w @wframe/core   # the same, over a live local REST API
+npm run demo:coffee        -w @wframe/core   # the driver chooses commands toward a goal
+npm run demo:http          -w @wframe/core   # the same, over a live local REST API
+npm run demo:smtp:real     -w @wframe/core   # learns a REAL SMTP server, then sends an email, 0 model calls
+npm run demo:postgres:real -w @wframe/core   # learns the REAL Postgres wire-protocol transaction machine
 ```
 
 ## Research

@@ -146,6 +146,40 @@ describe("driver: out-of-state verb escalates safely", () => {
   });
 });
 
+describe("inference: loops with recovery branches fold (regression for the under-merge cascade)", () => {
+  // A looping protocol (ADD* then SET*) with an OUT_OF_STOCK -> SUBSTITUTE -> re-ADD recovery
+  // branch, recorded at VARYING loop counts. The recovery error response of ADD_ITEM goes to a
+  // DIFFERENT state than its success response, so a verb-keyed determinism fold conflated them and
+  // tripped the rollback guard into an under-merge explosion (>100 states). Symbol-keyed
+  // determinism + evidence-driven merging keeps the recovery state distinct AND folds the loops.
+  function trace(k: number, m: number, recover: boolean): string[] {
+    const t = ["LOGIN/OK_SESSION", "START_ORDER/OK_ORDER"];
+    for (let i = 0; i < k; i++) {
+      if (recover && i === 0) t.push("ADD_ITEM/ERR_OUT_OF_STOCK", "SUBSTITUTE/OK_SUBSTITUTED", "ADD_ITEM/OK_LINE");
+      else t.push("ADD_ITEM/OK_LINE");
+    }
+    for (let i = 0; i < m; i++) t.push("SET_FIELD/OK_FIELD");
+    t.push("REVIEW/OK_REVIEWED", "VALIDATE/OK_VALIDATED", "SUBMIT/OK_SUBMITTED");
+    return t;
+  }
+
+  it("folds variable-length loops even with a recovery branch (bounded state count)", () => {
+    const traces: string[][] = [];
+    for (const k of [1, 2, 3, 4, 5]) for (const m of [1, 2, 3]) { traces.push(trace(k, m, false)); traces.push(trace(k, m, true)); }
+    const fsm = inferFsm(traces, "red-blue", 2);
+    // True machine is ~8 states; under the old verb-fold this was >100. Guard well below that.
+    expect(fsm.states.length).toBeLessThanOrEqual(12);
+    // The loop bodies must have folded into self-loops.
+    expect(fsm.transitions.some((t) => t.from === t.to && t.on === "ADD_ITEM/OK_LINE")).toBe(true);
+    expect(fsm.transitions.some((t) => t.from === t.to && t.on === "SET_FIELD/OK_FIELD")).toBe(true);
+    // The OUT_OF_STOCK recovery state must stay DISTINCT from drafting (not over-merged):
+    // SUBSTITUTE must transition out of the state reached by ERR_OUT_OF_STOCK, not self-loop on it.
+    const oos = fsm.transitions.find((t) => t.on === "ADD_ITEM/ERR_OUT_OF_STOCK");
+    expect(oos).toBeDefined();
+    expect(oos!.to).not.toBe(oos!.from);
+  });
+});
+
 describe("abstraction strips parameters", () => {
   it("strips token, id, and timestamp", () => {
     expect(abstractStep({ verb: "LOGIN tok-abc-123", response: "T1001 OK GREETING sid=abc123" }).symbol).toBe(

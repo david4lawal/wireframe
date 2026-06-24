@@ -101,48 +101,22 @@ function respOf(symbol: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Shared determinism fold (verb-keyed)                                */
+/* Shared determinism fold (symbol-keyed)                              */
 /* ------------------------------------------------------------------ */
 
 /**
- * Determinism fold on a partition, keyed on the request VERB (not the full symbol).
+ * Determinism fold on a partition, keyed on the FULL symbol "VERB/RESPONSE_TYPE" (classic DFA
+ * fold): two edges out of one block on the same symbol must point to one successor block. Used by
+ * every merge strategy (red-blue, RPNI, k-tails).
  *
- * Why verb, not symbol? Some verbs are PARAMETER-DEPENDENT: GET returns OK_ITEM for a known id
- * and ERR_NOTFOUND for an unknown one, from the SAME protocol state, because the deciding
- * parameter (the id) was abstracted away. So GET/OK_ITEM and GET/ERR_NOTFOUND are two responses
- * of ONE transition (the agent action "GET") and their successor states are the same state.
- * Folding on the verb unifies those successors, which is the correct abstraction-aware DFA.
- */
-function determinismFold(nodes: AptaNode[], uf: UnionFind): void {
-  let folded = true;
-  while (folded) {
-    folded = false;
-    const blockEdges = new Map<number, Map<string, number>>(); // block -> verb -> target block
-    for (let i = 0; i < nodes.length; i++) {
-      const fromBlock = uf.find(i);
-      let m = blockEdges.get(fromBlock);
-      if (!m) {
-        m = new Map();
-        blockEdges.set(fromBlock, m);
-      }
-      for (const [sym, child] of nodes[i].edges) {
-        const verb = verbOf(sym);
-        const toBlock = uf.find(child);
-        const seen = m.get(verb);
-        if (seen === undefined) m.set(verb, toBlock);
-        else if (seen !== toBlock) {
-          uf.union(seen, toBlock); // same verb from same state -> one successor state
-          folded = true;
-        }
-      }
-    }
-  }
-}
-
-/**
- * Determinism fold keyed on the FULL symbol (classic DFA fold). Used by RPNI and k-tails, which
- * do not have the abstraction-aware verb merging of red-blue. Two edges out of one block on the
- * same symbol must point to the same successor block.
+ * It keys on the full symbol, NOT the verb. A verb's different responses do NOT necessarily lead
+ * to the same state: GET/OK_ITEM and GET/ERR_NOTFOUND both return to the same AUTH state (a
+ * parameter-dependent variation the evidence-driven merge later unifies), but ADD_ITEM/OK_LINE
+ * stays in DRAFTING while ADD_ITEM/ERR_OUT_OF_STOCK moves to a DISTINCT "awaiting substitute"
+ * recovery state. A verb-keyed fold would force those recovery successors together, tripping the
+ * red-blue rollback guard into an under-merge cascade (a looping protocol with a recovery branch
+ * exploded to >100 states). Keying on the symbol keeps recovery states distinct and leaves the
+ * "are these the same state?" decision to the evidence-driven merge, where it belongs.
  */
 function symbolDeterminismFold(nodes: AptaNode[], uf: UnionFind): void {
   let folded = true;
@@ -359,7 +333,7 @@ function redBlueMerge(nodes: AptaNode[], root: number, k: number): UnionFind {
       const redRepsBefore = [...new Set(reds.map((x) => uf.find(x)))];
       const snap = snapshot(uf, nodes.length);
       uf.union(r, cand);
-      determinismFold(nodes, uf);
+      symbolDeterminismFold(nodes, uf);
       const ok = !redsCollapsed(uf, redRepsBefore);
       restore(uf, snap);
       if (!ok) continue;
@@ -375,7 +349,7 @@ function redBlueMerge(nodes: AptaNode[], root: number, k: number): UnionFind {
     let merged = false;
     if (bestRed >= 0 && bestScore !== Number.POSITIVE_INFINITY) {
       uf.union(bestRed, cand);
-      determinismFold(nodes, uf);
+      symbolDeterminismFold(nodes, uf);
       merged = true;
     } else if (bestScore === Number.POSITIVE_INFINITY) {
       merged = true; // already merged into a red by an earlier fold
@@ -388,7 +362,7 @@ function redBlueMerge(nodes: AptaNode[], root: number, k: number): UnionFind {
   }
 
   placeLeaves(nodes, uf, reds);
-  determinismFold(nodes, uf);
+  symbolDeterminismFold(nodes, uf);
   return uf;
 }
 
