@@ -7,11 +7,13 @@
   "workspaces": [
     "packages/core",
     "packages/cli",
+    "packages/mcp",
     "bench"
   ],
   "scripts": {
-    "build": "npm run build --workspace @wframe/core && npm run build --workspace @wframe/cli",
+    "build": "npm run build --workspace @wframe/core && npm run build --workspace @wframe/cli && npm run build --workspace @wframe/mcp",
     "test": "npm run test --workspace @wframe/core",
-    "bench": "npm run bench --workspace @wframe/bench"
+    "bench": "npm run bench --workspace @wframe/bench",
+    "demo:mcp": "npm run demo --workspace @wframe/mcp"
   }
 }
