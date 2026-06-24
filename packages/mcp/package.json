@@ -24,7 +24,7 @@
   ],
   "type": "module",
   "bin": {
-    "wframe-mcp": "./dist/server.js"
+    "wframe-mcp": "dist/server.js"
   },
   "files": [
     "dist",
